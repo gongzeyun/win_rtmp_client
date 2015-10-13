@@ -1,0 +1,40 @@
+﻿生成启动时间为 2015/10/13 18:33:35。
+     1>项目“C:\Users\gongzeyun\documents\visual studio 2010\Projects\rtmp\rtmp\rtmp.vcxproj”在节点 2 上(build 个目标)。
+     1>InitializeBuildStatus:
+         正在创建“Debug\rtmp.unsuccessfulbuild”，因为已指定“AlwaysCreate”。
+       ClCompile:
+         所有输出均为最新。
+         C:\Program Files\Microsoft Visual Studio 10.0\VC\bin\CL.exe /c /ZI /nologo /W3 /WX- /Od /Oy- /D WIN32 /D _DEBUG /D _CONSOLE /D _UNICODE /D UNICODE /Gm /EHsc /RTC1 /MDd /GS /fp:precise /Zc:wchar_t /Zc:forScope /Yu"StdAfx.h" /Fp"Debug\rtmp.pch" /Fo"Debug\\" /Fd"Debug\vc100.pdb" /Gd /TP /analyze- /errorReport:prompt RTMP_Core.cpp
+         RTMP_Core.cpp
+     1>c:\users\gongzeyun\documents\visual studio 2010\projects\rtmp\rtmp\rtmp_core.cpp(114): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files\microsoft visual studio 10.0\vc\include\string.h(105) : 参见“strcpy”的声明
+     1>c:\users\gongzeyun\documents\visual studio 2010\projects\rtmp\rtmp\rtmp_core.cpp(105): warning C4101: “pinstance”: 未引用的局部变量
+     1>c:\users\gongzeyun\documents\visual studio 2010\projects\rtmp\rtmp\rtmp_core.cpp(346): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files\microsoft visual studio 10.0\vc\include\string.h(105) : 参见“strcpy”的声明
+     1>c:\users\gongzeyun\documents\visual studio 2010\projects\rtmp\rtmp\rtmp_core.cpp(347): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files\microsoft visual studio 10.0\vc\include\string.h(105) : 参见“strcpy”的声明
+     1>c:\users\gongzeyun\documents\visual studio 2010\projects\rtmp\rtmp\rtmp_core.cpp(348): warning C4996: 'strcpy': This function or variable may be unsafe. Consider using strcpy_s instead. To disable deprecation, use _CRT_SECURE_NO_WARNINGS. See online help for details.
+                 c:\program files\microsoft visual studio 10.0\vc\include\string.h(105) : 参见“strcpy”的声明
+       ManifestResourceCompile:
+         所有输出均为最新。
+       Link:
+         C:\Program Files\Microsoft Visual Studio 10.0\VC\bin\link.exe /ERRORREPORT:PROMPT /OUT:"C:\Users\gongzeyun\documents\visual studio 2010\Projects\rtmp\Debug\rtmp.exe" /INCREMENTAL /NOLOGO kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /MANIFEST /ManifestFile:"Debug\rtmp.exe.intermediate.manifest" /MANIFESTUAC:"level='asInvoker' uiAccess='false'" /DEBUG /PDB:"C:\Users\gongzeyun\documents\visual studio 2010\Projects\rtmp\Debug\rtmp.pdb" /SUBSYSTEM:CONSOLE /TLBID:1 /DYNAMICBASE /NXCOMPAT /IMPLIB:"C:\Users\gongzeyun\documents\visual studio 2010\Projects\rtmp\Debug\rtmp.lib" /MACHINE:X86 Debug\rtmp.exe.embed.manifest.res
+         Debug\rtmp.obj
+         Debug\RTMP_Core.obj
+         Debug\RTMP_Packet.obj
+         Debug\RTMP_socket.obj
+         Debug\stdafx.obj
+       Manifest:
+         C:\Program Files\Microsoft SDKs\Windows\v7.0A\bin\mt.exe /nologo /verbose /out:"Debug\rtmp.exe.embed.manifest" /manifest Debug\rtmp.exe.intermediate.manifest
+         所有输出均为最新。
+       LinkEmbedManifest:
+         所有输出均为最新。
+         rtmp.vcxproj -> C:\Users\gongzeyun\documents\visual studio 2010\Projects\rtmp\Debug\rtmp.exe
+       FinalizeBuildStatus:
+         正在删除文件“Debug\rtmp.unsuccessfulbuild”。
+         正在对“Debug\rtmp.lastbuildstate”执行 Touch 任务。
+     1>已完成生成项目“C:\Users\gongzeyun\documents\visual studio 2010\Projects\rtmp\rtmp\rtmp.vcxproj”(build 个目标)的操作。
+
+生成成功。
+
+已用时间 00:00:01.62

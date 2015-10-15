@@ -171,19 +171,23 @@ int RTMP_Connect()
 	p = pkt.data;
 
 	RTMP_AMF_write_string(&p, "connect");
-	RTMP_AMF_write_number(&p, 1);	//always 1
+
+	g_context.tranction_id = 1;
+	RTMP_AMF_write_number(&p, g_context.tranction_id++);	//always 1
+
 
 	RTMP_AMF_write_object_start(&p);
 
 	RTMP_AMF_write_field_name(&p, "app");
 	RTMP_AMF_write_string(&p, g_context.app);
+	//RTMP_AMF_write_string(&p, "lives");
 
 	RTMP_AMF_write_field_name(&p, "flashVer");
-	RTMP_AMF_write_string(&p, "LNX 9,0,124,2");
+	RTMP_AMF_write_string(&p, "FMSc/1.0");
 	
 	RTMP_AMF_write_field_name(&p, "tcUrl");
-	RTMP_AMF_write_string(&p, g_context.url);
-
+	RTMP_AMF_write_string(&p, "rtmp://live.hkstv.hk.lxdns.com:1935/live");
+#if 1
 	RTMP_AMF_write_field_name(&p, "fpad");
 	RTMP_AMF_write_bool(&p, 0);
 
@@ -194,7 +198,7 @@ int RTMP_Connect()
     RTMP_AMF_write_number(&p, 252.0);
     RTMP_AMF_write_field_name(&p, "videoFunction");
     RTMP_AMF_write_number(&p, 1.0);
-
+#endif
 	RTMP_AMF_write_object_end(&p);
 
 	pkt.data_size = p - pkt.data;
@@ -236,6 +240,7 @@ int RTMP_Connect()
 	if (0 != RTMP_Send_packet(&pkt))
 	{
 		printf("[RTMP_Connect] send packet error\n");
+		RTMP_Destroy_packet(&pkt);
 		return -1;
 	}
 
@@ -249,13 +254,16 @@ int RTMP_Connect()
 	if (0 != RTMP_Recv_packet(&pkt_from_server))
 	{
 		printf("[RTMP_Connect] recv server BW packet error, line %d\n", __LINE__);
+		RTMP_Destroy_packet(&pkt_from_server);
 		return -1;
 	}
+	printf("msg type %d\n", pkt_from_server.msg_type);
 
 	g_context.server_band_width = (pkt_from_server.data[0] << 24) | (pkt_from_server.data[1] << 16) | (pkt_from_server.data[2] << 8) | (pkt_from_server.data[3]);
 	if (pkt_from_server.data_size < 4 || g_context.server_band_width < 0)
 	{
 		printf("[RTMP_Connect] recv server BW packet error, line %d\n", __LINE__);
+		RTMP_Destroy_packet(&pkt_from_server);
 		return -1;
 	}
 
@@ -264,23 +272,27 @@ int RTMP_Connect()
 	if (0 != RTMP_Recv_packet(&pkt_from_server))
 	{
 		printf("[RTMP_Connect] recv server BW packet error, line %d\n", __LINE__);
+		RTMP_Destroy_packet(&pkt_from_server);
 		return -1;
 	}
+	printf("msg type %d\n", pkt_from_server.msg_type);
+
 	g_context.client_band_width = g_context.server_band_width = (pkt_from_server.data[0] << 24) | (pkt_from_server.data[1] << 16) | (pkt_from_server.data[2] << 8) | (pkt_from_server.data[3]);
 	if (pkt_from_server.data_size < 4 || g_context.server_band_width < 0)
 	{
 		printf("[RTMP_Connect] recv Set Peer Bandwidth error, line %d\n", __LINE__);
+		RTMP_Destroy_packet(&pkt_from_server);
 		return -1;
 	}
 
 
-#if 1
+#if 0
 	//send packet to server[ msg type 5 server bandwidth]
 	RTMP_Packet pkt_to_server_BW;
 	ret = RTMP_Create_packet(&pkt_to_server_BW, 0, RTMP_NETWORK_CHANNEL, RTMP_PT_SERVER_BW, 0, 0, 4);
 
 	p = pkt_to_server_BW.data;
-	RTMP_write4byte_to_buffer(&p, g_context.server_band_width);
+	RTMP_write4byte_to_buffer_b(&p, g_context.server_band_width);
 
 	pkt_to_server_BW.data_size = p - pkt_to_server_BW.data;
 	if (0 != RTMP_Send_packet(&pkt_to_server_BW))
@@ -296,33 +308,267 @@ int RTMP_Connect()
 	if (0 != RTMP_Recv_packet(&pkt_from_server))
 	{
 		printf("[RTMP_Connect] recv server Stream begin pkt error, line %d\n", __LINE__);
+		RTMP_Destroy_packet(&pkt_from_server);
 		return -1;
 	}
-
+	printf("msg type %d\n", pkt_from_server.msg_type);
 	//recv packet from server[msg type 20, 17 Command message]
 	if (0 != RTMP_Recv_packet(&pkt_from_server))
 	{
 		printf("[RTMP_Connect] recv server Stream begin pkt error, line %d\n", __LINE__);
+		RTMP_Destroy_packet(&pkt_from_server);
 		return -1;
 	}
-
+	printf("msg type %d\n", pkt_from_server.msg_type);
+	//while (!RTMP_Recv_packet(&pkt_from_server));
 	RTMP_Destroy_packet(&pkt_from_server);
 
-#if 0
+#if 1
+	
 	//send packet to server[ msg type 5 server bandwidth]
 	RTMP_Packet pkt_to_server_BW;
 	ret = RTMP_Create_packet(&pkt_to_server_BW, 0, RTMP_NETWORK_CHANNEL, RTMP_PT_SERVER_BW, 0, 0, 4);
 
 	p = pkt_to_server_BW.data;
-	RTMP_write4byte_to_buffer(&p, g_context.server_band_width);
+	RTMP_write4byte_to_buffer_b(&p, g_context.server_band_width);
 
 	pkt_to_server_BW.data_size = p - pkt_to_server_BW.data;
 	if (0 != RTMP_Send_packet(&pkt_to_server_BW))
 	{
 		printf("[RTMP_Connect] send packet error\n");
+		RTMP_Destroy_packet(&pkt_to_server_BW);
 		return -1;
 	}
 #endif
+
+	RTMP_Destroy_packet(&pkt_to_server_BW);
+	return 0;
+}
+
+
+void process_server_pkt()
+{
+	RTMP_Packet pkt;
+	int ret = RTMP_Create_packet(&pkt, 0, RTMP_SYSTEM_CHANNEL, RTMP_PT_INVOKE, 0, 0, RTMP_PACKET_MAX_LENGTH);
+
+	while (1)
+	{
+		if (0 != RTMP_Recv_packet(&pkt))
+		{
+			//printf("[process_server_pkt] recv server create stream response error\n");
+			RTMP_Destroy_packet(&pkt);
+			return;
+		}
+		
+		
+		if (4 == pkt.msg_type)
+		{	
+			uint8_t content = *(pkt.data + 1);
+			//printf("break\n");
+		}
+		printf("==============================\n");
+		Sleep(100);
+	}
+
+	return;
+}
+
+
+int RTMP_Play()
+{
+	
+	uint8_t *p;
+
+	//generate createStream packet
+	RTMP_Packet pkt;
+	int ret = RTMP_Create_packet(&pkt, 0, RTMP_SYSTEM_CHANNEL, RTMP_PT_INVOKE, 0, 0, RTMP_PACKET_MAX_LENGTH);
+
+	p = pkt.data;
+	RTMP_AMF_write_string(&p, "createStream");
+	RTMP_AMF_write_number(&p, g_context.tranction_id++);
+	RTMP_AMF_write_null(&p);
+
+	pkt.data_size = p - pkt.data;
+
+	//send create stream  to server
+	if (0 != RTMP_Send_packet(&pkt))
+	{
+		printf("[RTMP_Play] send create stream error\n");
+		RTMP_Destroy_packet(&pkt);
+		return -1;
+	}
+
+	//recv command message, (_result- createStream response)
+	while (1)
+	{
+		if (0 != RTMP_Recv_packet(&pkt))
+		{
+			printf("[RTMP_Play] recv server create stream response error, line %d\n", __LINE__);
+			RTMP_Destroy_packet(&pkt);
+			return -1;
+		}
+		printf("msg type %d\n", pkt.msg_type);
+
+		if (!memcmp(pkt.data, "\002\000\007_result", 10))
+		{
+			//get stream id
+			//根据协议文档，最后pkt.data的最后8个字节为stream_id(即为payload的第21个字节开始，payload一共为29个字节)
+			uint64_t temp_stream_id = RTMP_read8byte_from_buffer(pkt.data + 21);
+
+			g_context.stream_id = RTMP_Int2double(temp_stream_id);
+			break;
+		}
+		else if ((!memcmp(pkt.data, "\002\000\010onBWDone", 11)))
+		{
+#if 1
+			RTMP_Packet pkt_check_bw;
+			int ret = RTMP_Create_packet(&pkt_check_bw, 0, RTMP_SYSTEM_CHANNEL, RTMP_PT_INVOKE, 0, 0, RTMP_PACKET_MAX_LENGTH);
+
+			p = pkt_check_bw.data;
+			RTMP_AMF_write_string(&p, "_checkbw");
+			RTMP_AMF_write_number(&p, g_context.tranction_id++);
+			RTMP_AMF_write_null(&p);
+
+			pkt_check_bw.data_size = p - pkt_check_bw.data;
+
+			RTMP_Send_packet(&pkt_check_bw);
+			RTMP_Destroy_packet(&pkt_check_bw);
+#endif
+		}
+	}
+
+	//now, we create stream success
+	RTMP_Destroy_packet(&pkt);
+
+
+	//generate play packet
+	RTMP_Packet pkt_play;
+	ret = RTMP_Create_packet(&pkt_play, 0, RTMP_VIDEO_CHANNEL, RTMP_PT_INVOKE, g_context.stream_id, 0, RTMP_PACKET_MAX_LENGTH);
+	p = pkt_play.data;
+
+	RTMP_AMF_write_string(&p, "play");
+	RTMP_AMF_write_number(&p, 4);
+
+	RTMP_AMF_write_null(&p);
+
+	RTMP_AMF_write_string(&p, g_context.instance);
+	//RTMP_AMF_write_string(&p, "hks");
+
+	RTMP_AMF_write_number(&p, -2 * 1000);	//default is -2
+
+	//RTMP_AMF_write_number(&p, -1000);	//default is -2
+
+	pkt_play.data_size = p - pkt_play.data;
+
+	if (0 != RTMP_Send_packet(&pkt_play))
+	{
+		printf("[RTMP_Connect] send packet error\n");
+		RTMP_Destroy_packet(&pkt_play);
+		return -1;
+	}
+#if 1
+	/**
+		* Generate client buffer time and send it to the server.
+	*/
+	p = pkt_play.data;
+	pkt_play.channel_id = RTMP_NETWORK_CHANNEL;
+	pkt_play.fmt_type = 0;
+	pkt_play.msg_type = RTMP_PT_PING;
+
+	RTMP_write2byte_to_buffer_b(&p, 3);
+	RTMP_write4byte_to_buffer_b(&p, g_context.stream_id);
+	RTMP_write4byte_to_buffer_b(&p, 3600);
+
+	pkt_play.data_size = p - pkt_play.data;
+	if (0 != RTMP_Send_packet(&pkt_play))
+	{
+		printf("[RTMP_Connect] send packet [set bug time]error\n");
+		RTMP_Destroy_packet(&pkt_play);
+		return -1;
+	}
+#endif
+	//根据协议说明文档，Server端应该回过来[set chunk size]消息
+	//其余消息忽略
+	while (1)
+	{
+		if (0 != RTMP_Recv_packet(&pkt_play))
+		{
+			printf("[RTMP_Play] recv server create stream response error, line %d\n", __LINE__);
+			RTMP_Destroy_packet(&pkt_play);
+			return -1;
+		}
+		if (RTMP_PT_CHUNK_SIZE == pkt_play.msg_type)		//msg is set chunk size
+		{
+			//get chunk size
+			printf("msg type %d\n", pkt_play.msg_type);
+			g_context.in_chunk_size = AV_RB32(pkt_play.data);
+			break;
+		}
+		printf("msg type %d\n", pkt_play.msg_type);
+	}
+
+	//根据协议文档说明，Server端应该回过来[StreamBegin]消息
+	//其余消息忽略
+	while (1)
+	{
+		if (0 != RTMP_Recv_packet(&pkt_play))
+		{
+			printf("[RTMP_Play] recv server create stream response error, line %d\n", __LINE__);
+			RTMP_Destroy_packet(&pkt_play);
+			return -1;
+		}
+		if (RTMP_PT_PING == pkt_play.msg_type)		//usr control msg
+		{
+			printf("msg type %d\n", pkt_play.msg_type);
+			break;
+		}
+		printf("msg type %d\n", pkt_play.msg_type);
+	}
+
+	//根据协议文档说明，Server端应该回过来[onStatus-play reset]消息
+	//其余消息忽略
+	while (1)
+	{
+		if (0 != RTMP_Recv_packet(&pkt_play))
+		{
+			printf("[RTMP_Play] recv server onStatus-play reset error, line %d\n", __LINE__);
+			RTMP_Destroy_packet(&pkt_play);
+			return -1;
+		}
+		if (RTMP_PT_INVOKE == pkt_play.msg_type)		//command msg
+		{
+			printf("msg type %d\n", pkt_play.msg_type);
+			break;
+		}
+	}
+
+	//根据协议文档说明，Server端应该回过来[onStatus-play start]消息
+	//其余消息忽略
+	while (1)
+	{
+		if (0 != RTMP_Recv_packet(&pkt_play))
+		{
+			printf("[RTMP_Play] recv server onStatus-play start error, line %d\n", __LINE__);
+			RTMP_Destroy_packet(&pkt_play);
+			return -1;
+		}
+		if (RTMP_PT_INVOKE == pkt_play.msg_type)		//command msg
+		{
+			printf("msg type %d\n", pkt_play.msg_type);
+			break;
+		}
+		
+	}
+
+	RTMP_Destroy_packet(&pkt_play);
+
+
+	//从此处开始，正常播放的时序已经完成
+	//启动处理接受packet线程
+	DWORD thread_id;
+	HANDLE h_thread_process_pkt = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)process_server_pkt, NULL, 0, &thread_id);
+
+	WaitForSingleObject(h_thread_process_pkt, INFINITE);
 	return 0;
 }
 
@@ -376,14 +622,12 @@ int RTMP_Open(char *url)
 
 
 	RTMP_Connect();
+	RTMP_Play();
 
 	return 0;
 }
 
 
 
-int RTMP_Play()
-{
-	//send create server to 
-}
+
 

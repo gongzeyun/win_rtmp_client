@@ -40,6 +40,7 @@ typedef struct RTMP_Packet
 	//int msg_stream_id;
 	int time_stamp;
 	int time_delta;
+
 	uint8_t *data;
 	int32_t data_size;
 
@@ -57,10 +58,21 @@ void RTMP_AMF_write_object_start(uint8_t **dst);
 void RTMP_AMF_write_field_name(uint8_t **dst, char *str);
 void RTMP_AMF_write_bool(uint8_t **dst, int val);
 void RTMP_AMF_write_object_end(uint8_t **dst);
+void RTMP_AMF_write_null(uint8_t **dst);
+
 
 int RTMP_Send_packet(RTMP_Packet *pkt);
 int RTMP_Recv_packet(RTMP_Packet *pkt);
 
-void RTMP_write4byte_to_buffer(uint8_t **p, uint32_t val);
+void RTMP_write4byte_to_buffer_b(uint8_t **p, uint32_t val);
+void RTMP_write4byte_to_buffer_l(uint8_t **p, uint32_t val);
+
+void RTMP_write2byte_to_buffer_b(uint8_t **p, uint16_t val);
+void RTMP_write2byte_to_buffer_l(uint8_t **p, uint16_t val);
+
+uint64_t RTMP_read8byte_from_buffer(uint8_t *p);
+double RTMP_Int2double(uint64_t i);
+uint64_t RTMP_Double2int(double f);
+
 
 #endif

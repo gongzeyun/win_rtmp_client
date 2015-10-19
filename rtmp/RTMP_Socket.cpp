@@ -42,11 +42,19 @@ int RTMP_Socket_open(IN char *host_name, IN int port)
         return -1;
     }
 
+	
 	temp = (sockaddr_in*)result->ai_addr;
+
+	//temp->sin_addr.s_addr  = inet_addr("203.207.99.19");
 
 	/* connect to server */
 	SOCKET fd_socket = socket(AF_INET, SOCK_STREAM, 0);
 	
+	int nZero=0;
+	int set_ret = -1;
+
+	set_ret = setsockopt(fd_socket, SOL_SOCKET, SO_RCVBUF, (char *)&nZero, sizeof(int));
+
 	int ret_conn = -1;
 	ret_conn = connect(fd_socket, (sockaddr*)temp, sizeof(sockaddr));
 

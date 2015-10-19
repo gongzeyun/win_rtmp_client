@@ -3,6 +3,9 @@
 #include "rtmp.h"
 #include "common.h"
 #include "RTMP_Socket.h"
+#include "RTMP_Core.h"
+
+extern RTMP_Context g_context;
 
 union RTMP_intfloat64
 {
@@ -17,6 +20,23 @@ uint64_t RTMP_Double2int(double f)
     v.f = f;
     return v.i;
 }
+
+
+double RTMP_Int2double(uint64_t i)
+{
+	union RTMP_intfloat64 v;
+	v.i = i;
+	return v.f;
+}
+
+void RTMP_AMF_write_null(uint8_t **dst)
+{
+    //bytestream_put_byte(dst, AMF_DATA_TYPE_NULL);
+	**dst = AMF_DATA_TYPE_NULL;
+
+	(*dst) += 1;
+}
+
 
 void RTMP_AMF_write_string(uint8_t **dst, char *str)
 {
@@ -135,11 +155,77 @@ int RTMP_Create_packet(RTMP_Packet* pkt, int fmt_type, RTMPChannel channel_id,
 	pkt->time_stamp = time_stamp;
 	pkt->data_size = data_size;
 
+	pkt->read_data_size = 0;
+	pkt->is_read_complete = 0;
+
 	return 0;
 }
 
 
-void RTMP_write4byte_to_buffer(uint8_t **p, uint32_t val)
+void RTMP_write4byte_to_buffer_l(uint8_t **p, uint32_t val)
+{
+	//*(uint32_t*)(*p) = val;
+	//*p += sizeof(val);
+
+	uint8_t highest_byte = 0;
+	uint8_t higher_byte = 0;
+	uint8_t lower_byte = 0;
+	uint8_t lowest_byte = 0;
+
+	highest_byte = val >> 24;
+	higher_byte = val >> 16;
+	lower_byte = val >> 8;
+	lowest_byte = val;
+
+
+	**p = lowest_byte;
+	*p += sizeof(uint8_t);
+
+	**p = lower_byte;
+	*p += sizeof(uint8_t);
+
+	**p = higher_byte;
+	*p += sizeof(uint8_t);
+
+	**p = highest_byte;
+	*p += sizeof(uint8_t);
+
+
+	return;
+}
+
+
+void RTMP_write2byte_to_buffer_b(uint8_t **p, uint16_t val)
+{
+	uint8_t high_byte = 0;
+	uint8_t low_byte = 0;
+
+	high_byte = val >> 8;
+	low_byte = val;
+
+	**p = high_byte;
+	(*p) += 1;
+
+	**p = low_byte;
+	(*p) += 1;
+
+}
+void RTMP_write2byte_to_buffer_l(uint8_t **p, uint16_t val)
+{
+	uint8_t high_byte = 0;
+	uint8_t low_byte = 0;
+
+	high_byte = val >> 8;
+	low_byte = val;
+
+	**p = low_byte;
+	(*p) += 1;
+
+	**p = high_byte;
+	(*p) += 1;
+}
+
+void RTMP_write4byte_to_buffer_b(uint8_t **p, uint32_t val)
 {
 	//*(uint32_t*)(*p) = val;
 	//*p += sizeof(val);
@@ -204,6 +290,24 @@ void RTMP_write1byte_to_buffer(uint8_t **p, uint8_t val)
 }
 
 
+
+uint64_t RTMP_read8byte_from_buffer(uint8_t *p)
+{
+	uint8_t temp[8] = {0};
+	uint64_t ret = 0;
+
+	for (int i = 0; i < 8; i++)
+	{
+		temp[7 - i] = *(p + i);
+	}
+
+
+	memcpy((char*)&ret, temp, 8);
+
+	return ret;
+}
+
+
 void RTMP_Destroy_packet(RTMP_Packet *pkt)
 {
 	if (NULL == pkt)
@@ -214,13 +318,17 @@ void RTMP_Destroy_packet(RTMP_Packet *pkt)
 	free(pkt->data);
 }
 
-int RTMP_Recv_packet(RTMP_Packet *pkt)
+
+int RTMP_Recv_packet_internal(RTMP_Packet *pkt)
 {
 	uint8_t hdr;
 	uint8_t *p_hdr_recv;
 
+	uint8_t fmt_type_map[4] = {11, 7, 3, 0};
+
 	uint8_t hdr_recv[18] = {0};
 	p_hdr_recv = hdr_recv;
+
 
 	int read_ret = RTMP_Read((char*)&hdr, 1);
 	if (0 >= read_ret)
@@ -229,8 +337,13 @@ int RTMP_Recv_packet(RTMP_Packet *pkt)
 		return -1;
 	}
 
+	//if (197 == hdr)
+	//{
+	//	printf("video data come\n");
+	//}
+
 	//根据hdr取得fmt_type
-	uint8_t fmt_type_recv = hdr >> 6;
+	uint8_t fmt_type_recv = hdr >> 6;	
 	pkt->fmt_type = fmt_type_recv;
 
 	uint8_t character_code_channel_id = hdr & 0x3F;
@@ -243,22 +356,9 @@ int RTMP_Recv_packet(RTMP_Packet *pkt)
 			Chunk Type = 2时，msg_header 有3个字节
 			Chunk Type = 3时，msg_header 有0个字节
 	*/
-	if (0 == fmt_type_recv)
-	{
-		hdr_size_recv += 11;
-	}
-	else if (1 == fmt_type_recv)
-	{
-		hdr_size_recv += 7;
-	}
-	else if (2 == fmt_type_recv)
-	{
-		hdr_size_recv += 3;
-	}
-	else
-	{
-		hdr_size_recv += 0;
-	}
+
+	//printf("fmt type %d\n", fmt_type_recv);
+	hdr_size_recv += fmt_type_map[fmt_type_recv];
 
 
 	if (character_code_channel_id == 0)
@@ -274,11 +374,15 @@ int RTMP_Recv_packet(RTMP_Packet *pkt)
 		hdr_size_recv += 0;
 	}
 
-	read_ret = RTMP_Read((char*)hdr_recv, hdr_size_recv); 
-	if (read_ret <= 0)
+
+	if (fmt_type_recv < 3)
 	{
-		printf("[RTMP_Recv_packet] line %d, error, errorno %d\n", __LINE__, WSAGetLastError());
-		return -1;
+		read_ret = RTMP_Read((char*)hdr_recv, hdr_size_recv); 
+		if (read_ret <= 0)
+		{
+			printf("[RTMP_Recv_packet] line %d, error, errorno %d\n", __LINE__, WSAGetLastError());
+			return -1;
+		}
 	}
 
 	if (character_code_channel_id == 0)
@@ -294,54 +398,176 @@ int RTMP_Recv_packet(RTMP_Packet *pkt)
 	}
 	else
 	{
+		//printf("character_code_channel_id is %d\n", character_code_channel_id);
 		pkt->channel_id = (RTMPChannel)character_code_channel_id;
+		//printf("channel id %d\n", pkt->channel_id);
 	}
+
+#if 0
+	printf("channel_id = %d, fmt_type = %d, data_size = %d, read_data_size %d\n", pkt->channel_id,fmt_type_recv,
+			g_context.prev_packets[pkt->channel_id].data_size,
+			g_context.prev_packets[pkt->channel_id].read_data_size);
+
+
+	printf("hdr data: ");
+	for (int i = 0; i < hdr_size_recv; i++)
+	{
+		printf("%d ", hdr_recv[i]);
+	}
+	printf("\n");
+#endif
 
 	//只有Chunk Type为0时，才有time_stamp
 	if (fmt_type_recv == 0)
 	{
-		pkt->time_stamp = ((*p_hdr_recv) << 16) | ((*(p_hdr_recv + 1)) << 8) | ((*(p_hdr_recv + 2)));
+		pkt->time_stamp = ((*p_hdr_recv) << 16) | ((*(p_hdr_recv + 1)) << 8) | ((*(p_hdr_recv + 2)));		
 		p_hdr_recv += 3;
 	}
 
 	//只有Chunk Type为1和2时，才有time delta
 	if (fmt_type_recv == 1 || fmt_type_recv == 2)
 	{
-		pkt->time_stamp = ((*p_hdr_recv) << 16) | ((*(p_hdr_recv + 1)) << 8) | ((*(p_hdr_recv + 2)));
+		pkt->time_delta = ((*p_hdr_recv) << 16) | ((*(p_hdr_recv + 1)) << 8) | ((*(p_hdr_recv + 2)));
+		pkt->time_stamp = g_context.prev_packets[pkt->channel_id].time_stamp + pkt->time_delta;
 		p_hdr_recv += 3;
 	}
+	
 
-	//只有Chunk Type为0、1、2时，才有msg length
-	if (fmt_type_recv < 3)
+	if (fmt_type_recv >= 2)
+	{
+		pkt->msg_stream_id = g_context.prev_packets[pkt->channel_id].msg_stream_id;
+		pkt->msg_type = g_context.prev_packets[pkt->channel_id].msg_type;
+		pkt->data_size = g_context.prev_packets[pkt->channel_id].data_size;
+		pkt->time_stamp = g_context.prev_packets[pkt->channel_id].time_stamp;
+	}
+	if (fmt_type_recv == 3)
+	{
+		//从以前保留的现场信息中恢复
+		if (g_context.prev_packets[pkt->channel_id].is_read_complete == 1)
+		{
+			//说明当前包和之前包不属于同一个msg
+		}
+		else
+		{
+			//说明当前包和之前报是属于同一个msg
+			memcpy(pkt, &g_context.prev_packets[pkt->channel_id], sizeof(RTMP_Packet));
+		}
+
+		//Sleep(10);
+	}
+
+	//只有Chunk Type为0、1时，才有msg length
+	if (fmt_type_recv < 2)
 	{
 		pkt->data_size = ((*p_hdr_recv) << 16) | ((*(p_hdr_recv + 1)) << 8) | ((*(p_hdr_recv + 2)));
+		if (pkt->data_size <= 0)
+		{
+			printf("data size %d error, break\n", pkt->data_size);
+		}
+
+		g_context.prev_packets[pkt->channel_id].data_size = pkt->data_size;
+
 		p_hdr_recv += 3;
 	}
 
-	//只有Chunk Type为0、1、2时，才有msg type
+	//只有Chunk Type为0、1时，才有msg type
 	//msg type 1个字节
-	if (fmt_type_recv < 3)
+	if (fmt_type_recv < 2)
 	{
 		pkt->msg_type = (RTMPPacketType)((*(p_hdr_recv)));
+		g_context.prev_packets[pkt->channel_id].msg_type = pkt->msg_type;
+
 		++p_hdr_recv;
 	}
 
+	
 	//只有Chunk Type 为0时，才有msg stream id
 	//msg stream id为4个字节
 	if (0 == fmt_type_recv)
 	{
-		pkt->msg_stream_id = ((*p_hdr_recv) << 24) | ((*(p_hdr_recv + 1)) << 16) | ((*(p_hdr_recv + 2)) << 8) | ((*(p_hdr_recv + 3)));
+		//坑爹，这个地方竟然是小端序
+		pkt->msg_stream_id = *(uint32_t *)(p_hdr_recv);
 	}
 
-	read_ret = RTMP_Read((char*)pkt->data, pkt->data_size);
-	if (read_ret <= 0)
+	if (pkt->data_size - pkt->read_data_size < 0)
 	{
-		printf("[RTMP_Recv_packet] line %d, error, errorno %d\n", __LINE__, WSAGetLastError());
-		return -1;
+		pkt->read_data_size = 0;
 	}
 
+	int to_read = RTMP_MIN(g_context.in_chunk_size, pkt->data_size - pkt->read_data_size);
+	
+	int read_data_size1 = 0;
+	while (read_data_size1 < to_read)
+	{
+		int read_ret2 = RTMP_Read((char*)pkt->data + pkt->read_data_size + read_data_size1, 
+									to_read - read_data_size1);
+		//for (int i = 0; i < read_ret2; i++)
+		//{
+		//	printf("0x%02x ", *((char*)pkt->data + pkt->read_data_size + read_data_size1 + i));
+		//}
+		//printf("\n");
+		if (read_ret2 <= 0)
+		{
+			printf("Functio %s, nline %d error, errorno %d\n", __FUNCTION__, __LINE__, WSAGetLastError());
+			return -1;
+		}
+
+		read_data_size1 += read_ret2;
+	}
+
+	pkt->read_data_size += to_read;
+
+
+	if (pkt->read_data_size < pkt->data_size)
+	{
+		pkt->is_read_complete = 0;
+	}
+	else
+	{
+		pkt->is_read_complete = 1;
+	}
+	
+	g_context.prev_packets[pkt->channel_id].channel_id = pkt->channel_id;
+	g_context.prev_packets[pkt->channel_id].is_read_complete = pkt->is_read_complete;
+	g_context.prev_packets[pkt->channel_id].msg_type = pkt->msg_type;
+	g_context.prev_packets[pkt->channel_id].data_size = pkt->data_size;
+	g_context.prev_packets[pkt->channel_id].read_data_size = pkt->read_data_size;
+	g_context.prev_packets[pkt->channel_id].time_stamp = pkt->time_stamp;
+	//if (g_context.prev_packets[pkt->channel_id].time_stamp > 1800000)
+	//{
+	//	printf("break;\n");
+	//}
+
+	//printf("read data size %d, total size %d\n", pkt->read_data_size, pkt->data_size);
+	memcpy(g_context.prev_packets[pkt->channel_id].data, pkt->data, pkt->read_data_size);
+	
 	return 0;
 
+}
+
+
+int RTMP_Recv_packet(RTMP_Packet *pkt)
+{
+
+	//printf("***************************************\n");
+	while (0 == RTMP_Recv_packet_internal(pkt))
+	{
+		if (!pkt->is_read_complete)
+		{
+			continue;
+		}
+		else
+		{
+			break;
+		}
+	}
+
+	g_context.bytes_read += pkt->data_size;
+	
+	pkt->is_read_complete = 0;
+	pkt->read_data_size = 0;
+	
+	return 0;
 }
 
 
@@ -421,23 +647,24 @@ int RTMP_Send_packet(RTMP_Packet *pkt)
 		RTMP_write1byte_to_buffer(&p, pkt->msg_type);
 
 		//set msg stream id
-		RTMP_write4byte_to_buffer(&p, pkt->msg_stream_id);
+		RTMP_write4byte_to_buffer_l(&p, pkt->msg_stream_id);	//小端序	
 	}
 
 
 	//msg header end
 	int send_ret = -1;
 	send_ret = RTMP_Write((char*)pkt_header, p - pkt_header);
+
 	if (send_ret <= 0)
 	{
-		printf("[RTMP_Send_packet] fmt type 0, send data error\n", WSAGetLastError());
+		printf("[RTMP_Send_packet] fmt type 0, send data error %d\n", WSAGetLastError());
 		return -1;
 	}
 
 	int send_size = 0; 
 	while (send_size < pkt->data_size)
 	{
-		int towrite = RTMP_MIN(128, pkt->data_size - send_size);
+		int towrite = RTMP_MIN(g_context.in_chunk_size, pkt->data_size - send_size);
 		send_ret = RTMP_Write((char*)pkt->data + send_size, towrite);
 		if (send_ret <= 0)
 		{
@@ -453,7 +680,7 @@ int RTMP_Send_packet(RTMP_Packet *pkt)
 			send_ret = RTMP_Write((char*)&marker, sizeof(marker));
 			if (send_ret <= 0)
 			{
-				printf("[RTMP_Send_packet] fmt type 0, send header error\n", WSAGetLastError());
+				printf("[RTMP_Send_packet] fmt type 0, send header error %d\n", WSAGetLastError());
 				return -1;
 			}
 		}

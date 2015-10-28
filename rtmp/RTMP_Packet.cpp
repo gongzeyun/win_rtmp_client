@@ -161,7 +161,7 @@ int RTMP_Create_packet(RTMP_Packet* pkt, int fmt_type, RTMPChannel channel_id,
 	return 0;
 }
 
-
+//å°ç«¯åº
 void RTMP_write4byte_to_buffer_l(uint8_t **p, uint32_t val)
 {
 	//*(uint32_t*)(*p) = val;
@@ -194,7 +194,7 @@ void RTMP_write4byte_to_buffer_l(uint8_t **p, uint32_t val)
 	return;
 }
 
-
+//å¤§ç«¯åº
 void RTMP_write2byte_to_buffer_b(uint8_t **p, uint16_t val)
 {
 	uint8_t high_byte = 0;
@@ -210,6 +210,8 @@ void RTMP_write2byte_to_buffer_b(uint8_t **p, uint16_t val)
 	(*p) += 1;
 
 }
+
+//å°ç«¯åº
 void RTMP_write2byte_to_buffer_l(uint8_t **p, uint16_t val)
 {
 	uint8_t high_byte = 0;
@@ -225,6 +227,7 @@ void RTMP_write2byte_to_buffer_l(uint8_t **p, uint16_t val)
 	(*p) += 1;
 }
 
+//å¤§ç«¯åº
 void RTMP_write4byte_to_buffer_b(uint8_t **p, uint32_t val)
 {
 	//*(uint32_t*)(*p) = val;
@@ -342,7 +345,7 @@ int RTMP_Recv_packet_internal(RTMP_Packet *pkt)
 	//	printf("video data come\n");
 	//}
 
-	//¸ù¾İhdrÈ¡µÃfmt_type
+	//æ ¹æ®hdrå–å¾—fmt_type
 	uint8_t fmt_type_recv = hdr >> 6;	
 	pkt->fmt_type = fmt_type_recv;
 
@@ -350,11 +353,11 @@ int RTMP_Recv_packet_internal(RTMP_Packet *pkt)
 	uint8_t hdr_size_recv = 0;
 
 	/*
-		¸ù¾İĞ­ÒéÎÄµµ£º
-			Chunk Type = 0Ê±£¬msg_header ÓĞ11¸ö×Ö½Ú
-			Chunk Type = 1Ê±£¬msg_header ÓĞ7¸ö×Ö½Ú
-			Chunk Type = 2Ê±£¬msg_header ÓĞ3¸ö×Ö½Ú
-			Chunk Type = 3Ê±£¬msg_header ÓĞ0¸ö×Ö½Ú
+		æ ¹æ®åè®®æ–‡æ¡£ï¼š
+			Chunk Type = 0æ—¶ï¼Œmsg_header æœ‰11ä¸ªå­—èŠ‚
+			Chunk Type = 1æ—¶ï¼Œmsg_header æœ‰7ä¸ªå­—èŠ‚
+			Chunk Type = 2æ—¶ï¼Œmsg_header æœ‰3ä¸ªå­—èŠ‚
+			Chunk Type = 3æ—¶ï¼Œmsg_header æœ‰0ä¸ªå­—èŠ‚
 	*/
 
 	//printf("fmt type %d\n", fmt_type_recv);
@@ -417,14 +420,14 @@ int RTMP_Recv_packet_internal(RTMP_Packet *pkt)
 	printf("\n");
 #endif
 
-	//Ö»ÓĞChunk TypeÎª0Ê±£¬²ÅÓĞtime_stamp
+	//åªæœ‰Chunk Typeä¸º0æ—¶ï¼Œæ‰æœ‰time_stamp
 	if (fmt_type_recv == 0)
 	{
 		pkt->time_stamp = ((*p_hdr_recv) << 16) | ((*(p_hdr_recv + 1)) << 8) | ((*(p_hdr_recv + 2)));		
 		p_hdr_recv += 3;
 	}
 
-	//Ö»ÓĞChunk TypeÎª1ºÍ2Ê±£¬²ÅÓĞtime delta
+	//åªæœ‰Chunk Typeä¸º1å’Œ2æ—¶ï¼Œæ‰æœ‰time delta
 	if (fmt_type_recv == 1 || fmt_type_recv == 2)
 	{
 		pkt->time_delta = ((*p_hdr_recv) << 16) | ((*(p_hdr_recv + 1)) << 8) | ((*(p_hdr_recv + 2)));
@@ -442,21 +445,21 @@ int RTMP_Recv_packet_internal(RTMP_Packet *pkt)
 	}
 	if (fmt_type_recv == 3)
 	{
-		//´ÓÒÔÇ°±£ÁôµÄÏÖ³¡ĞÅÏ¢ÖĞ»Ö¸´
+		//ä»ä»¥å‰ä¿ç•™çš„ç°åœºä¿¡æ¯ä¸­æ¢å¤
 		if (g_context.prev_packets[pkt->channel_id].is_read_complete == 1)
 		{
-			//ËµÃ÷µ±Ç°°üºÍÖ®Ç°°ü²»ÊôÓÚÍ¬Ò»¸ömsg
+			//è¯´æ˜å½“å‰åŒ…å’Œä¹‹å‰åŒ…ä¸å±äºåŒä¸€ä¸ªmsg
 		}
 		else
 		{
-			//ËµÃ÷µ±Ç°°üºÍÖ®Ç°±¨ÊÇÊôÓÚÍ¬Ò»¸ömsg
+			//è¯´æ˜å½“å‰åŒ…å’Œä¹‹å‰æŠ¥æ˜¯å±äºåŒä¸€ä¸ªmsg
 			memcpy(pkt, &g_context.prev_packets[pkt->channel_id], sizeof(RTMP_Packet));
 		}
 
 		//Sleep(10);
 	}
 
-	//Ö»ÓĞChunk TypeÎª0¡¢1Ê±£¬²ÅÓĞmsg length
+	//åªæœ‰Chunk Typeä¸º0ã€1æ—¶ï¼Œæ‰æœ‰msg length
 	if (fmt_type_recv < 2)
 	{
 		pkt->data_size = ((*p_hdr_recv) << 16) | ((*(p_hdr_recv + 1)) << 8) | ((*(p_hdr_recv + 2)));
@@ -470,8 +473,8 @@ int RTMP_Recv_packet_internal(RTMP_Packet *pkt)
 		p_hdr_recv += 3;
 	}
 
-	//Ö»ÓĞChunk TypeÎª0¡¢1Ê±£¬²ÅÓĞmsg type
-	//msg type 1¸ö×Ö½Ú
+	//åªæœ‰Chunk Typeä¸º0ã€1æ—¶ï¼Œæ‰æœ‰msg type
+	//msg type 1ä¸ªå­—èŠ‚
 	if (fmt_type_recv < 2)
 	{
 		pkt->msg_type = (RTMPPacketType)((*(p_hdr_recv)));
@@ -481,11 +484,11 @@ int RTMP_Recv_packet_internal(RTMP_Packet *pkt)
 	}
 
 	
-	//Ö»ÓĞChunk Type Îª0Ê±£¬²ÅÓĞmsg stream id
-	//msg stream idÎª4¸ö×Ö½Ú
+	//åªæœ‰Chunk Type ä¸º0æ—¶ï¼Œæ‰æœ‰msg stream id
+	//msg stream idä¸º4ä¸ªå­—èŠ‚
 	if (0 == fmt_type_recv)
 	{
-		//¿Óµù£¬Õâ¸öµØ·½¾¹È»ÊÇĞ¡¶ËĞò
+		//å‘çˆ¹ï¼Œè¿™ä¸ªåœ°æ–¹ç«Ÿç„¶æ˜¯å°ç«¯åº
 		pkt->msg_stream_id = *(uint32_t *)(p_hdr_recv);
 	}
 
@@ -573,7 +576,7 @@ int RTMP_Recv_packet(RTMP_Packet *pkt)
 
 int RTMP_Send_packet(RTMP_Packet *pkt)
 {
-	uint8_t pkt_header[18] = {0};	//¸ù¾İĞ­ÒéÎÄµµ£¬header ×î´óÎª14¸ö×Ö½Ú
+	uint8_t pkt_header[18] = {0};	//æ ¹æ®åè®®æ–‡æ¡£ï¼Œheader æœ€å¤§ä¸º14ä¸ªå­—èŠ‚
 	uint8_t *p = pkt_header;
 
 	if (pkt->fmt_type > 3)
@@ -603,7 +606,7 @@ int RTMP_Send_packet(RTMP_Packet *pkt)
 		Chunk basic header 3
 	*/
 	  
-	/* ¸ù¾İÉÏÃæĞ­ÒéÎÄµµÖĞµÄËµÃ÷£¬¶Ôheader½øĞĞÆ´½Ó */
+	/* æ ¹æ®ä¸Šé¢åè®®æ–‡æ¡£ä¸­çš„è¯´æ˜ï¼Œå¯¹headerè¿›è¡Œæ‹¼æ¥ */
 	if (pkt->channel_id > 65599)
 	{
 		printf("[RTMP_Send_packet] pkt channel id error, channel id %d\n", pkt->channel_id);
@@ -631,9 +634,9 @@ int RTMP_Send_packet(RTMP_Packet *pkt)
 	}
 
 	/*
-		¸ù¾İĞ­ÒéÎÄµµ£¬µ±fmt_typeÎª0Ê±£¬
-		timestampÎª3¸öbyte, msg_length Îª3¸öbyte,
-		message type id Îª1¸öbyte,msg stream id Îª4¸öbyte
+		æ ¹æ®åè®®æ–‡æ¡£ï¼Œå½“fmt_typeä¸º0æ—¶ï¼Œ
+		timestampä¸º3ä¸ªbyte, msg_length ä¸º3ä¸ªbyte,
+		message type id ä¸º1ä¸ªbyte,msg stream id ä¸º4ä¸ªbyte
 	*/
 	if (pkt->fmt_type == 0)
 	{
@@ -647,7 +650,7 @@ int RTMP_Send_packet(RTMP_Packet *pkt)
 		RTMP_write1byte_to_buffer(&p, pkt->msg_type);
 
 		//set msg stream id
-		RTMP_write4byte_to_buffer_l(&p, pkt->msg_stream_id);	//Ğ¡¶ËĞò	
+		RTMP_write4byte_to_buffer_l(&p, pkt->msg_stream_id);	//å°ç«¯åº	
 	}
 
 
